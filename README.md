@@ -71,7 +71,7 @@ MIT. See [LICENSE](LICENSE).
 
 ## Full version / 完整版
 
-The full pack is at GUMROAD_URL.
+The full pack is at https://caoyadong.gumroad.com/l/umolb.
 
 Related: the [$9 n8n DevOps Automation Pack](https://caoyadong.gumroad.com/l/yvmcqj).
 
@@ -164,7 +164,7 @@ MIT。见 [LICENSE](LICENSE)。
 
 ## 完整版
 
-完整包地址：GUMROAD_URL。
+完整包地址：https://caoyadong.gumroad.com/l/umolb。
 
 相关套件：[$9 n8n DevOps Automation Pack](https://caoyadong.gumroad.com/l/yvmcqj)。
 
