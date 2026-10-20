@@ -1,0 +1,47 @@
+# Preview subset: instance down, disk fill prediction, memory.
+# Full pack adds CPU, inodes, load, containers, blackbox, nginx, and postgres.
+groups:
+  - name: node.rules
+    rules:
+      - alert: NodeInstanceDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "Target {{ $labels.instance }} in job {{ $labels.job }} has up={{ $value }} for more than 2 minutes."
+          runbook: "docs/RUNBOOK.md#NodeInstanceDown"
+
+      - alert: NodeHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory on {{ $labels.instance }}"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value }} percent, above the 90 percent threshold for more than 5 minutes."
+          runbook: "docs/RUNBOOK.md#NodeHighMemory"
+
+      - alert: NodeDiskWillFill
+        expr: |
+          (
+            predict_linear(
+              node_filesystem_avail_bytes{job="node",fstype!~"tmpfs|devtmpfs|overlay|squashfs|aufs|iso9660",mountpoint!~"^/boot(/.*)?$"}[6h],
+              24 * 3600
+            ) < 0
+          )
+          and
+          (
+            node_filesystem_avail_bytes{job="node",fstype!~"tmpfs|devtmpfs|overlay|squashfs|aufs|iso9660",mountpoint!~"^/boot(/.*)?$"}
+            /
+            node_filesystem_size_bytes{job="node",fstype!~"tmpfs|devtmpfs|overlay|squashfs|aufs|iso9660",mountpoint!~"^/boot(/.*)?$"}
+            < 0.20
+          )
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} may fill within 24 hours"
+          description: "predict_linear on {{ $labels.device }} mounted at {{ $labels.mountpoint }} on {{ $labels.instance }} reaches zero within 24 hours, and free space is already under 20 percent."
+          runbook: "docs/RUNBOOK.md#NodeDiskWillFill"

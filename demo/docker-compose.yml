@@ -1,0 +1,60 @@
+name: pga-lite
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    # Local demo only. The image has no shell, and a new named volume is root-owned.
+    user: "0"
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+    network_mode: host
+    volumes:
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../rules:/etc/prometheus/rules:ro
+      - promdata:/prometheus
+    depends_on:
+      - node-exporter
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host/root
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|boot|run|var/lib/docker|var/lib/kubelet|var/lib/containerd)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SERVER_ROOT_URL: "http://127.0.0.1:3000"
+      GF_LOG_LEVEL: warn
+    network_mode: host
+    volumes:
+      - ../dashboards/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../dashboards/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../dashboards/node-overview.json:/var/lib/grafana/dashboards/node-overview.json:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  promdata: {}

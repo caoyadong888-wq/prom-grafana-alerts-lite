@@ -1,0 +1,44 @@
+# Paths are relative to this file.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: demo
+
+rule_files:
+  - rules/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - "127.0.0.1:9090"
+
+  # Host networking: node_exporter is on localhost.
+  - job_name: node
+    static_configs:
+      - targets:
+          - "127.0.0.1:9100"
+    relabel_configs:
+      - target_label: instance
+        replacement: "demo-host:9100"
+    # Demo graphs keep common mountpoints. Other binds are not scraped.
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: node_filesystem_.+
+        target_label: __fs
+        replacement: "1"
+      - source_labels: [__fs, mountpoint]
+        separator: ";"
+        regex: '1;(/|/(home|opt|usr|var|data|srv|mnt)(/.*)?)'
+        target_label: __keep_fs
+        replacement: "1"
+      - source_labels: [__fs, __keep_fs]
+        separator: ";"
+        regex: "1;"
+        action: drop
+      - source_labels: [mountpoint]
+        regex: '.*/(docker|kubelet|containerd)(/.*)?'
+        action: drop
+      - regex: '__fs|__keep_fs'
+        action: labeldrop

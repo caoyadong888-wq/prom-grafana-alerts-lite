@@ -1,0 +1,61 @@
+rule_files:
+  - ../node.rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node",instance="demo-host:9100"}'
+        values: "0x15"
+      - series: 'up{job="node",instance="demo-host:9101"}'
+        values: "1x15"
+      - series: 'node_memory_MemAvailable_bytes{job="node",instance="demo-host:9100"}'
+        values: "500+0x30"
+      - series: 'node_memory_MemTotal_bytes{job="node",instance="demo-host:9100"}'
+        values: "10000+0x30"
+      - series: 'node_filesystem_avail_bytes{job="node",instance="demo-host:9100",mountpoint="/",fstype="ext4",device="/dev/vda1"}'
+        values: "2500-2x280"
+      - series: 'node_filesystem_size_bytes{job="node",instance="demo-host:9100",mountpoint="/",fstype="ext4",device="/dev/vda1"}'
+        values: "10000+0x280"
+      - series: 'node_filesystem_avail_bytes{job="node",instance="demo-host:9100",mountpoint="/tmp",fstype="tmpfs",device="tmpfs"}'
+        values: "2500-2x280"
+      - series: 'node_filesystem_size_bytes{job="node",instance="demo-host:9100",mountpoint="/tmp",fstype="tmpfs",device="tmpfs"}'
+        values: "10000+0x280"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: NodeInstanceDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: node
+              instance: demo-host:9100
+            exp_annotations:
+              summary: "Instance demo-host:9100 is down"
+              description: "Target demo-host:9100 in job node has up=0 for more than 2 minutes."
+              runbook: "docs/RUNBOOK.md#NodeInstanceDown"
+      - eval_time: 5m
+        alertname: NodeHighMemory
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: node
+              instance: demo-host:9100
+            exp_annotations:
+              summary: "High memory on demo-host:9100"
+              description: "Memory usage on demo-host:9100 is 95 percent, above the 90 percent threshold for more than 5 minutes."
+              runbook: "docs/RUNBOOK.md#NodeHighMemory"
+      - eval_time: 280m
+        alertname: NodeDiskWillFill
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: node
+              instance: demo-host:9100
+              mountpoint: /
+              fstype: ext4
+              device: /dev/vda1
+            exp_annotations:
+              summary: "Filesystem / on demo-host:9100 may fill within 24 hours"
+              description: "predict_linear on /dev/vda1 mounted at / on demo-host:9100 reaches zero within 24 hours, and free space is already under 20 percent."
+              runbook: "docs/RUNBOOK.md#NodeDiskWillFill"
